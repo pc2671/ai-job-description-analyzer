@@ -1,5 +1,6 @@
 import gradio as gr
 from analyzer import analyze_job_description
+from scraper import extract_text_from_url
 
 # -------------------
 # AI Job Description Analyzer - Version 1
@@ -43,15 +44,27 @@ def analyze_job(url, pasted_text):
 
     # clean up the pasted text by removing extra spaces at beginning / end.
     text = pasted_text.strip()
+    source_note = ""
 
-    # if the user did not paste text but entered a URL, we temporarily use
-    # the URL as the source. Later, we will add real webpage scraping logic
-    if not text and url.strip():
-        text = f"Job description extracted from URL: {url.strip()}"
-        source_note = "Using URL input. URL scraping logic will be added next."
-    # if the user pasted a job description, use that text directly
-    elif text:
+    # if the user pasted a JD, use it directly cuz it's more reliable than URL scraping
+    if text:
         source_note = "Using pasted job description."
+    # if no pasted text is provided, try to extract tedt from the URL
+    elif url.strip():
+        try:
+            text = extract_text_from_url(url)
+            source_note = "Using job description extracted from URL"
+        except ValueError:
+            return (
+                "Could not extract the job description from this URL.\n\n"
+                "Some job sites block automated text extraction or load content with JavaScript.\n\n"
+                "Please paste the job description manually instead.",
+                "",
+                "",
+                "",
+                "",
+                ""               
+            )
     
     # if both fields are empty, ask the user to provide input
     else: 
@@ -66,7 +79,7 @@ def analyze_job(url, pasted_text):
     
     result = analyze_job_description(text)
 
-    summary = result["summary"]
+    summary = source_note + "\n\n" + result["summary"]
     skills = ", ".join(result["skills"]) if result["skills"] else "No specific technical skills detected yet."
     tools = ", ".join(result["tools"]) if result["tools"] else "No specific tools or technologies detected yet."
     experience_level = result["experience_level"]
